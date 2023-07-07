@@ -12,12 +12,14 @@ categories = ["cryptography::cryptocurrencies"]
 
 [dependencies]
 lazy_static = { version = "1.4.0", optional = true }
-cpufeatures = { version = "0.2.5", optional = true }
-ring = "0.16.20"
 sha2 = "0.10.6"
 
 [dev-dependencies]
 rustc-hex = "2.1.0"
+
+[target.'cfg(not(target = "wasm32-unknown-unknown"))'.dependencies]
+cpufeatures = { version = "0.2.5", optional = true }
+ring = { version = "0.16.20", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-test = "0.3.33"
@@ -25,4 +27,4 @@ wasm-bindgen-test = "0.3.33"
 [features]
 default = ["zero_hash_cache", "detect-cpufeatures"]
 zero_hash_cache = ["lazy_static"]
-detect-cpufeatures = ["cpufeatures"]
+detect-cpufeatures = ["cpufeatures", "ring"]
