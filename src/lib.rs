@@ -84,10 +84,10 @@ impl Sha256 for Sha2CrateImpl {
 }
 
 /// Implementation of SHA256 using the `ring` crate (fastest on CPUs without SHA extensions).
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "detect-cpufeatures")]
 pub struct RingImpl;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "detect-cpufeatures")]
 impl Sha256Context for ring::digest::Context {
     fn new() -> Self {
         Self::new(&ring::digest::SHA256)
@@ -104,7 +104,7 @@ impl Sha256Context for ring::digest::Context {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(feature = "detect-cpufeatures")]
 impl Sha256 for RingImpl {
     type Context = ring::digest::Context;
 
@@ -124,7 +124,7 @@ impl Sha256 for RingImpl {
 /// Default dynamic implementation that switches between available implementations.
 pub enum DynamicImpl {
     Sha2,
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "detect-cpufeatures")]
     Ring,
 }
 
@@ -155,14 +155,14 @@ impl DynamicImpl {
     /// Choose the best available implementation based on the currently executing CPU.
     #[inline(always)]
     pub fn best() -> Self {
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(feature = "detect-cpufeatures")]
         return if have_sha_extensions() {
             Self::Sha2
         } else {
             Self::Ring
         };
 
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(not(feature = "detect-cpufeatures"))]
         return Self::Sha2;
     }
 }
@@ -174,7 +174,7 @@ impl Sha256 for DynamicImpl {
     fn hash(&self, input: &[u8]) -> Vec<u8> {
         match self {
             Self::Sha2 => Sha2CrateImpl.hash(input),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(feature = "detect-cpufeatures")]
             Self::Ring => RingImpl.hash(input),
         }
     }
@@ -183,7 +183,7 @@ impl Sha256 for DynamicImpl {
     fn hash_fixed(&self, input: &[u8]) -> [u8; HASH_LEN] {
         match self {
             Self::Sha2 => Sha2CrateImpl.hash_fixed(input),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(feature = "detect-cpufeatures")]
             Self::Ring => RingImpl.hash_fixed(input),
         }
     }
@@ -194,7 +194,7 @@ impl Sha256 for DynamicImpl {
 /// This enum ends up being 8 bytes larger than the largest inner context.
 pub enum DynamicContext {
     Sha2(sha2::Sha256),
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(feature = "detect-cpufeatures")]
     Ring(ring::digest::Context),
 }
 
@@ -202,7 +202,7 @@ impl Sha256Context for DynamicContext {
     fn new() -> Self {
         match DynamicImpl::best() {
             DynamicImpl::Sha2 => Self::Sha2(Sha256Context::new()),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(feature = "detect-cpufeatures")]
             DynamicImpl::Ring => Self::Ring(Sha256Context::new()),
         }
     }
@@ -210,7 +210,7 @@ impl Sha256Context for DynamicContext {
     fn update(&mut self, bytes: &[u8]) {
         match self {
             Self::Sha2(ctxt) => Sha256Context::update(ctxt, bytes),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(feature = "detect-cpufeatures")]
             Self::Ring(ctxt) => Sha256Context::update(ctxt, bytes),
         }
     }
@@ -218,7 +218,7 @@ impl Sha256Context for DynamicContext {
     fn finalize(self) -> [u8; HASH_LEN] {
         match self {
             Self::Sha2(ctxt) => Sha256Context::finalize(ctxt),
-            #[cfg(not(target_arch = "wasm32"))]
+            #[cfg(feature = "detect-cpufeatures")]
             Self::Ring(ctxt) => Sha256Context::finalize(ctxt),
         }
     }
